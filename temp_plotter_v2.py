@@ -6,10 +6,8 @@ import time
 import serial.tools.list_ports
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import h5py
 
-# ----------------------------
-# 1. Device connection (run once)
-# ----------------------------
 def connect_devices():
     devices = serial.tools.list_ports.comports()
 
@@ -40,9 +38,6 @@ def connect_devices():
     return {k: v for k, v in connected.items() if v is not None}
 
 
-# ----------------------------
-# 2. Poll temperatures each frame
-# ----------------------------
 def read_temperatures(devices):
     readings = {}
 
@@ -86,9 +81,6 @@ def read_temperatures(devices):
     return readings
 
 
-# ----------------------------
-# 3. Setup plots
-# ----------------------------
 def setup_plots(device_data):
     num_devices = len(device_data)
     nrows = (num_devices + 1) // 2
@@ -121,9 +113,6 @@ def setup_plots(device_data):
     return fig, axes, lines, data
 
 
-# ----------------------------
-# 4. Animate updates
-# ----------------------------
 def main():
     devices = connect_devices()
     if not devices:
