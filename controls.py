@@ -37,12 +37,12 @@ def connect_devices():  # Connects to devices
         "CTC100B": ctc100B,
         "LakeshoreModel224": model224,
         "LakeshoreModel372": model372
-    }
+    } # Add extra devices here if the setup changes
 
     return {k: v for k, v in connected.items() if v is not None}
 
 
-class SwitchControlWidget(QWidget):  # Creates inputs for heat switches
+class SwitchControlWidget(QWidget):  # Creates inputs for heat switches - enter a voltage and confirm
     def __init__(self, device, channel):
         super().__init__()
         self.device = device
@@ -114,7 +114,7 @@ class SwitchControlWidget(QWidget):  # Creates inputs for heat switches
 
 
 
-class HeaterButton(QPushButton):  # Buttons for heaters
+class HeaterButton(QPushButton):  # Buttons for heaters - these are PID controlled, currently function as on/off only
     def __init__(self, device, channel, initial_state=False):
         super().__init__()
         self.device = device
@@ -147,14 +147,14 @@ class HeaterButton(QPushButton):  # Buttons for heaters
             print(f"Error toggling heater {self.device.name} {self.channel}: {e}")
 
 
-class ControlPanel(QWidget):  # Creates the control panel
+class ControlPanel(QWidget):  # Creates the surrounding control panel
     def __init__(self, devices):
         super().__init__()
         self.setWindowTitle("Heat Switch & Heater Control")
         self.main_layout = QHBoxLayout()
         self.setLayout(self.main_layout)
 
-        for dev_name, dev in devices.items():
+        for dev_name, dev in devices.items(): # Columns of devices, with controls of each channel under label
 
             device_layout = QVBoxLayout()
             label = QLabel(dev_name)
