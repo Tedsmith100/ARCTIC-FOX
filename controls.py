@@ -10,6 +10,7 @@ from lakeshore224device import LakeShore224Device
 from lakeshore372device import LakeShore372Device
 import serial
 
+ # Active Regulation & Control of Thermal Interfaces for Cryogenic Fridge Operation eXperiments (ARCTIC FOX)
 
 def connect_devices():  # Connects to devices
     devices = serial.tools.list_ports.comports()
@@ -37,12 +38,12 @@ def connect_devices():  # Connects to devices
         "CTC100B": ctc100B,
         "LakeshoreModel224": model224,
         "LakeshoreModel372": model372
-    } # Add extra devices here if the setup changes
+    }
 
     return {k: v for k, v in connected.items() if v is not None}
 
 
-class SwitchControlWidget(QWidget):  # Creates inputs for heat switches - enter a voltage and confirm
+class SwitchWidget(QWidget):  # Creates inputs for heat switches, these have voltage inputs
     def __init__(self, device, channel):
         super().__init__()
         self.device = device
@@ -114,7 +115,7 @@ class SwitchControlWidget(QWidget):  # Creates inputs for heat switches - enter 
 
 
 
-class HeaterButton(QPushButton):  # Buttons for heaters - these are PID controlled, currently function as on/off only
+class HeaterButton(QPushButton):  # Buttons for heaters, these are toggleable, on/off
     def __init__(self, device, channel, initial_state=False):
         super().__init__()
         self.device = device
@@ -147,7 +148,7 @@ class HeaterButton(QPushButton):  # Buttons for heaters - these are PID controll
             print(f"Error toggling heater {self.device.name} {self.channel}: {e}")
 
 
-class ControlPanel(QWidget):  # Creates the surrounding control panel
+class ControlPanel(QWidget):  # Creates the control panel
     def __init__(self, devices):
         super().__init__()
         self.setWindowTitle("Heat Switch & Heater Control")
@@ -167,7 +168,7 @@ class ControlPanel(QWidget):  # Creates the surrounding control panel
                 row = QHBoxLayout()
 
                 if ch_type == "switch":
-                    row.addWidget(SwitchControlWidget(dev, channel))
+                    row.addWidget(SwitchWidget(dev, channel))
 
                 elif ch_type == "heater":
                     row.addWidget(HeaterButton(dev, channel))
