@@ -113,6 +113,76 @@ class SwitchWidget(QWidget):  # Creates inputs for heat switches, these have vol
         except Exception as e:
             print(f"Error turning off {self.device.name} {self.channel}: {e}")
 
+class HeaterSetWidget(QWidget):  # Creates inputs for heaters, at a set temp which is maintained using PID
+    def __init__(self, device, channel):
+        super().__init__()
+        self.device = device
+        self.channel = channel
+        self.state = False  # OFF by default
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+
+
+        # Label for channel
+        label = QLabel(f"HEATER ({channel})")
+        label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(label)
+
+        # Voltage input row
+        row = QHBoxLayout()
+
+        self.temperature_input = QLineEdit()
+        self.temperature_input.setPlaceholderText("Temperature (K)")
+        self.temperature_input.setFixedWidth(90)
+
+        self.set_button = QPushButton("Set Temp PID")
+        self.set_button.clicked.connect(self.set_temp)
+
+        row.addWidget(self.temperature_input)
+        row.addWidget(self.set_button)
+
+        layout.addLayout(row)
+
+        # Off button
+        self.off_button = QPushButton("Turn Off")
+        self.off_button.clicked.connect(self.turn_off)
+        layout.addWidget(self.off_button)
+
+        # Initialize button color
+        self.update_off_button_color()
+
+    def update_off_button_color(self):
+        # Green if ON, red if OFF
+        color = "lightgreen" if self.state else "lightcoral"
+        self.off_button.setStyleSheet(f"background-color: {color};")
+
+    def set_temp(self):
+        try:
+            temperature = float(self.temperature_input.text())
+            self.device.write_setpoint(self.channel, temperature)
+            heater_on(self.device, self.channel)
+            # Mark as ON after setting temperature
+            self.state = True
+            self.update_off_button_color()
+
+            print(f"{self.device.name} {self.channel} updated to {temperature} V")
+
+        except ValueError:
+            print("Invalid temperature entered.")
+        except Exception as e:
+            print(f"Error setting temperature on {self.device.name} {self.channel}: {e}")
+
+    def turn_off(self):
+        try:
+            heater_off(self.device, self.channel)
+            self.state = False
+            self.update_off_button_color()
+            print(f"{self.device.name} {self.channel} switched OFF")
+        except Exception as e:
+            print(f"Error turning off {self.device.name} {self.channel}: {e}")
+
 
 
 class HeaterButton(QPushButton):  # Buttons for heaters, these are toggleable, on/off
@@ -243,7 +313,7 @@ class ControlPanel(QWidget):  # Creates the control panel
                     row.addWidget(SwitchWidget(dev, channel))
 
                 elif ch_type == "heater":
-                    row.addWidget(HeaterButton(dev, channel))
+                    row.addWidget(HeaterSetWidget(dev, channel))
 
                 device_layout.addLayout(row)
 
@@ -252,7 +322,7 @@ class ControlPanel(QWidget):  # Creates the control panel
     @staticmethod
     def get_channels_for_device(dev_name):
         """
-        Returns dict: {channel: "switch" | "heater" | "still_heater}
+        Returns dict: {channel: "switch" | "heater" | "still_heater"}
         """
 
         if dev_name in ("CTC100A", "CTC100B"):
