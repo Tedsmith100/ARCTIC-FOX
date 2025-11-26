@@ -100,7 +100,7 @@ def api_set_switch():
     )
     return jsonify(status="ok")
 
-@app.route("/api/turn_switch_off", methods=["POST"])
+@app.route("/api/turn_off_switch", methods=["POST"])
 def api_switch_off():
     data = request.json
     controller.turn_off_switch(
