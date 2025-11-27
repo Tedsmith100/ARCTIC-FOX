@@ -278,20 +278,44 @@ def plot_png(plot_id):
     buf = io.BytesIO()
     fig, ax = plt.subplots(figsize=(6, 3))
 
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Temperature (K)")
+    ax.grid(True)
+    ax.set_title(f"{device}")
+
     for ch, ys in ys_dict.items():
         if times and ys:
             ax.plot(times, ys, label=ch)
 
-    ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Temperature / Voltage")
-    ax.set_title(f"{device}")
-    ax.legend(loc="upper right", fontsize="small")
+    leg = ax.legend(
+        loc='upper left',
+        bbox_to_anchor=(1.02, 1),
+        fontsize = 'small'
+    )
+
+    label_to_index = {t.get_text(): i for i, t in enumerate(leg.texts)}
+
+    for ch, ys in ys_dict.items():
+        if times and ys:
+            current_temp = ys[-1]
+            idx = label_to_index[ch]
+            if len(times)>11:
+                grad = (ys[-1] - ys[-10]) / (times[-1] - times[-10])
+                leg.texts[idx].set_text(
+                f"{ch}\n {current_temp:.3f}K\n {grad:2f}K/min"
+                )
+            else:
+                leg.texts[idx].set_text(
+                f"{ch}\n {current_temp:.3f}K"
+                )
+
     fig.tight_layout()
     fig.savefig(buf, format="png")
     plt.close(fig)
 
     buf.seek(0)
     return Response(buf.getvalue(), mimetype="image/png")
+
 
 # -------------------------
 # API endpoint for data
@@ -331,3 +355,4 @@ if __name__ == "__main__":
     # 0. Optionally re-scan devices each time you start; devices already scanned at import
     print("Starting Flask server. Devices:", list(devices.keys()))
     app.run(debug=True, host="0.0.0.0", port=5000)
+
