@@ -26,6 +26,11 @@ from controller import hardware_lock
 from controller import DeviceController
 from device import connect_devices
 
+import matplotlib
+matplotlib.use("Agg")   # non-GUI backend, works for generating PNGs in the background
+
+import matplotlib.pyplot as plt
+
 # load devices and create controller
 devices = connect_devices()
 print("Detected devices:", list(devices.keys()))
@@ -164,12 +169,6 @@ def api_still_off():
 # plot_data[device][channel] = list of values
 # plot_data[device]["times"] = list of timestamps
 
-PLOT_MAPPING = {
-    1: ("CTC100A", "4switchA"),
-    2: ("CTC100B", "4switchB"),
-    3: ("Lakeshore372", "MC"),
-    4: ("Lakeshore224", "4K")  # make sure the channel exists in plot_data
-}
 
 plot_data = {
     "CTC100A": {"times": [], "4switchA": [], "4pumpA": [], "3switchA": [], "3pumpA": []},
@@ -177,6 +176,21 @@ plot_data = {
     "Lakeshore372": {"times": [], "MC": [], "Still": []},
     "Lakeshore224": {"times": [], "4HePotA": [], "3HePotA": [], "4HePotB": [], "3HePotB": [], "Condenser": [], "50K": [], "4K": []}
 }
+# -------------------------
+# Dynamic plot mapping
+# -------------------------
+PLOT_MAPPING = {}
+plot_id = 1
+
+for dev_name in temp_reader.devices.keys():
+    # use channels from plot_data (ignore 'times')
+    channels = [k for k in plot_data.get(dev_name, {}) if k != "times"]
+    if channels:
+        PLOT_MAPPING[plot_id] = (dev_name, channels)
+        plot_id += 1
+
+print("Dynamic PLOT_MAPPING:", PLOT_MAPPING)
+
 
 plot_lock = threading.Lock()
 
@@ -247,27 +261,31 @@ def plot_png(plot_id):
     return Response(buf.getvalue(), mimetype="image/png")
 """
 
+
+
+# Backwards-compatible small endpoint returning the 4 numeric single traces (if you still want them)
 @app.route("/plot/<int:plot_id>.png")
 def plot_png(plot_id):
-    import matplotlib.pyplot as plt
-
     if plot_id not in PLOT_MAPPING:
         return "Invalid plot ID", 404
 
-    device, channel = PLOT_MAPPING[plot_id]
+    device, channels = PLOT_MAPPING[plot_id]
 
     with plot_lock:
-        ys = plot_data.get(device, {}).get(channel, [])
-        xs = plot_data.get(device, {}).get("times", [])
+        times = plot_data.get(device, {}).get("times", [])
+        ys_dict = {ch: plot_data[device].get(ch, []) for ch in channels}
 
     buf = io.BytesIO()
     fig, ax = plt.subplots(figsize=(6, 3))
 
-    if xs and ys:
-        ax.plot(xs, ys)
-        ax.set_xlabel("Time (s)")
+    for ch, ys in ys_dict.items():
+        if times and ys:
+            ax.plot(times, ys, label=ch)
 
-    ax.set_title(f"{device} — {channel}")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Temperature / Voltage")
+    ax.set_title(f"{device}")
+    ax.legend(loc="upper right", fontsize="small")
     fig.tight_layout()
     fig.savefig(buf, format="png")
     plt.close(fig)
@@ -275,37 +293,35 @@ def plot_png(plot_id):
     buf.seek(0)
     return Response(buf.getvalue(), mimetype="image/png")
 
-# Backwards-compatible small endpoint returning the 4 numeric single traces (if you still want them)
+# -------------------------
+# API endpoint for data
+# -------------------------
 @app.route("/api/plotdata")
 def api_plotdata():
-    # Build up to 4 summary traces (CTC100A, CTC100B, Lakeshore372, Lakeshore224)
     with plot_lock:
-        def last_channel_avg(dev, chname):
-            devd = plot_data.get(dev, {})
-            vals = devd.get(chname, [])
-            return list(vals)
-        return jsonify({
-            "1": last_channel_avg("CTC100A", "4switchA"),
-            "2": last_channel_avg("CTC100B", "4switchB"),
-            "3": last_channel_avg("Lakeshore372", "MC"),
-            "4": last_channel_avg("Lakeshore224", "4K Plate"),
-        })
+        result = {}
+        for pid, (dev_name, channels) in PLOT_MAPPING.items():
+            result[pid] = {ch: plot_data.get(dev_name, {}).get(ch, []) for ch in channels}
+        return jsonify(result)
 
-@app.route("/display/CTC100A")
-def display_ctc100a():
-    return render_template("display_single.html", title="CTC100A", plots=[1])
+# -------------------------
+# Display routes
+# -------------------------
+@app.route("/display/<device_name>")
+def display_device(device_name):
+    # find plot_id for device_name
+    plot_ids = [pid for pid, (dname, _) in PLOT_MAPPING.items() if dname == device_name]
+    if not plot_ids:
+        return f"No plots found for {device_name}", 404
+    return render_template("display_single.html", title=device_name, plots=plot_ids)
 
-@app.route("/display/CTC100B")
-def display_ctc100b():
-    return render_template("display_single.html", title="CTC100B", plots=[2])
+# -------------------------
+# Live display of all plots
+# -------------------------
+@app.route("/display")
+def display_all():
+    return render_template("display.html", plots=list(PLOT_MAPPING.keys()))
 
-@app.route("/display/Lakeshore372")
-def display_ls372():
-    return render_template("display_single.html", title="Lakeshore 372", plots=[3])
-
-@app.route("/display/Lakeshore224")
-def display_ls224():
-    return render_template("display_single.html", title="Lakeshore 224", plots=[4])
 
 
 # ---------------------------------------------------------------------
@@ -315,4 +331,3 @@ if __name__ == "__main__":
     # 0. Optionally re-scan devices each time you start; devices already scanned at import
     print("Starting Flask server. Devices:", list(devices.keys()))
     app.run(debug=True, host="0.0.0.0", port=5000)
-
