@@ -31,6 +31,14 @@ matplotlib.use("Agg")   # non-GUI backend, works for generating PNGs in the back
 
 import matplotlib.pyplot as plt
 
+# Global dictionary storing last set values for all devices/channels
+# Keys are tuples: (device_name, channel_name)
+LAST_VALUES = {}
+
+# Stores heater/switch/still ON/OFF state
+# Keys: (device, channel) → "on" or "off"
+LAST_STATES = {}
+
 # load devices and create controller
 devices = connect_devices()
 print("Detected devices:", list(devices.keys()))
@@ -79,15 +87,24 @@ def display():
 
 @app.route("/controller")
 def controller_page():
-    # Pass the devices and channel mappings to Jinja template
-    # For each device we pass device.name and channels
     devices_context = {}
     for dev_name, dev in devices.items():
         channels = get_channels_for_device(dev_name)
-        devices_context[dev_name] = {
-            "channels": channels
-        }
-    return render_template("controller.html", devices=devices_context)
+        devices_context[dev_name] = {"channels": channels}
+
+    return render_template(
+        "controller.html",
+        devices=devices_context,
+        last_values=LAST_VALUES,
+        last_states=LAST_STATES
+    )
+
+@app.route("/api/controller_state")
+def api_controller_state():
+    # Convert tuple keys to strings so JSON can send them
+    values = {f"{dev}::{ch}": val for (dev, ch), val in LAST_VALUES.items()}
+    states = {f"{dev}::{ch}": st for (dev, ch), st in LAST_STATES.items()}
+    return jsonify({"values": values, "states": states})
 
 
 # ---------------------------------------------------------------------
@@ -97,20 +114,30 @@ def controller_page():
 # -----------------------------
 # SWITCH CONTROL
 # -----------------------------
+
 @app.route("/api/set_switch_voltage", methods=["POST"])
 def api_set_switch():
     data = request.json
-    controller.set_switch_voltage(
-        data["device"], data["channel"], float(data["value"])
-    )
+    dev = data["device"]
+    ch = data["channel"]
+    value = float(data["value"])
+
+    LAST_VALUES[(dev, ch)] = value      # STORE VALUE
+    LAST_STATES[(dev, ch)] = "on"
+
+    controller.set_switch_voltage(dev, ch, value)
     return jsonify(status="ok")
 
 @app.route("/api/turn_off_switch", methods=["POST"])
 def api_switch_off():
     data = request.json
-    controller.turn_off_switch(
-        data["device"], data["channel"]
-    )
+    dev = data["device"]
+    ch = data["channel"]
+
+    LAST_VALUES[(dev, ch)] = None       # CLEAR VALUE
+    LAST_STATES[(dev, ch)] = "off"
+
+    controller.turn_off_switch(dev, ch)
     return jsonify(status="ok")
 
 
@@ -120,27 +147,27 @@ def api_switch_off():
 @app.route("/api/set_heater_temp", methods=["POST"])
 def api_set_heater_temp():
     data = request.json
-    controller.set_heater_temperature(
-        data["device"], data["channel"], float(data["value"])
-    )
+    dev = data["device"]
+    ch = data["channel"]
+    value = float(data["value"])
+
+    LAST_VALUES[(dev, ch)] = value      # STORE VALUE
+    LAST_STATES[(dev, ch)] = "on"
+
+    controller.set_heater_temperature(dev, ch, value)
     return jsonify(status="ok")
 
 @app.route("/api/turn_off_heater", methods=["POST"])
 def api_heater_off():
     data = request.json
-    controller.turn_off_heater(
-        data["device"], data["channel"]
-    )
-    return jsonify(status="ok")
+    dev = data["device"]
+    ch = data["channel"]
 
-@app.route("/api/toggle_heater", methods=["POST"])
-def api_toggle_heater():
-    data = request.json
-    controller.toggle_heater(
-        data["device"], data["channel"], bool(data["state"])
-    )
-    return jsonify(status="ok")
+    LAST_VALUES[(dev, ch)] = None       # CLEAR VALUE
+    LAST_STATES[(dev, ch)] = "off"
 
+    controller.turn_off_heater(dev, ch)
+    return jsonify(status="ok")
 
 # -----------------------------
 # STILL HEATER CONTROL
@@ -148,18 +175,28 @@ def api_toggle_heater():
 @app.route("/api/set_still_percentage", methods=["POST"])
 def api_set_still():
     data = request.json
-    controller.set_still_percentage(
-        data["device"], data["channel"], float(data["value"])
-    )
+    dev = data["device"]
+    ch = data["channel"]
+    value = float(data["value"])
+
+    LAST_VALUES[(dev, ch)] = value      # STORE VALUE
+    LAST_STATES[(dev, ch)] = "on"
+
+    controller.set_still_percentage(dev, ch, value)
     return jsonify(status="ok")
 
 @app.route("/api/turn_off_still", methods=["POST"])
 def api_still_off():
     data = request.json
-    controller.turn_off_still(
-        data["device"], data["channel"]
-    )
+    dev = data["device"]
+    ch = data["channel"]
+
+    LAST_VALUES[(dev, ch)] = None       # CLEAR VALUE
+    LAST_STATES[(dev, ch)] = "off"
+
+    controller.turn_off_still(dev, ch)
     return jsonify(status="ok")
+
 
 # ---------------------------------------------------------------------
 # Live plot backend — FOUR independent data streams
@@ -355,4 +392,3 @@ if __name__ == "__main__":
     # 0. Optionally re-scan devices each time you start; devices already scanned at import
     print("Starting Flask server. Devices:", list(devices.keys()))
     app.run(debug=False, host="0.0.0.0", port=8083)
-
