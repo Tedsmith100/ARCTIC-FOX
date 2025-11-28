@@ -17,34 +17,6 @@ class HardwareTemperatureReader:
     def __init__(self, devices):
         self.devices = devices
 
-    def connect_devices(self):
-        ports = serial.tools.list_ports.comports()
-        ctc100A = None
-        ctc100B = None
-        ls224 = None
-        ls372 = None
-
-        for p in ports:
-            if 'FT230X' in p.description:
-                if 'DK0CDLQP' in p.serial_number:
-                    ctc100B = CTC100Device(address=p.device, name='CTC100B')
-                elif 'DK0CDKFB' in p.serial_number:
-                    ctc100A = CTC100Device(address=p.device, name='CTC100A')
-
-            elif '224' in p.description:
-                ls224 = LakeShore224Device(port=p.device, name='Lakeshore224')
-
-            elif '372' in p.description:
-                ls372 = LakeShore372Device(port=p.device, name='Lakeshore372')
-
-        connected = {
-            "CTC100A": ctc100A,
-            "CTC100B": ctc100B,
-            "Lakeshore224": ls224,
-            "Lakeshore372": ls372,
-        }
-        return {k: v for k, v in connected.items() if v is not None}
-
     def read_temperatures(self):
         d = self.devices
         readings = {}

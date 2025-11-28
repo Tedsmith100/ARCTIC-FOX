@@ -354,5 +354,5 @@ def display_all():
 if __name__ == "__main__":
     # 0. Optionally re-scan devices each time you start; devices already scanned at import
     print("Starting Flask server. Devices:", list(devices.keys()))
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True, host="0.0.0.0", port=8083)
 
