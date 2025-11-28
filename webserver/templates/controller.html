@@ -3,21 +3,6 @@
 <head>
   <meta charset="utf-8">
   <title>ARCTIC FOX — Controller</title>
-  <!--<style>
-    body { font-family: sans-serif; margin: 10px; }
-    header { display:flex; flex-direction: column; gap:10px; margin-bottom: 10px; }
-    .nav-top { display:flex; gap:20px; align-items:center; }
-    .container { display:flex; gap: 20px; align-items:flex-start; flex-wrap: wrap; }
-    .device { border: 1px solid #ddd; padding: 12px; width: 320px; border-radius:6px; }
-    .device h3 { margin: 6px 0 10px 0; text-align:center; }
-    .row { display:flex; gap:8px; margin-bottom:8px; align-items:center; }
-    input[type="number"], input[type="text"] { padding:6px; width: 120px; }
-    button { padding:6px 10px; cursor:pointer; }
-    .on { background-color: lightgreen; }
-    .off { background-color: lightcoral; }
-    .label { font-weight:600; width: 120px; display:inline-block; }
-    hr { border: 0; border-top: 1px solid #eee; margin: 6px 0; }
-</style>-->
 
 <style>
     body {
@@ -54,15 +39,16 @@
     .container { display:flex; gap: 20px; align-items:flex-start; flex-wrap: wrap; }
     .device { border: 1px solid #ddd; padding: 12px; width: 320px; border-radius:6px; }
     .device h3 { margin: 6px 0 10px 0; text-align:center; }
+
     .row { display:flex; gap:8px; margin-bottom:8px; align-items:center; }
     input[type="number"], input[type="text"] { padding:6px; width: 120px; }
     button { padding:6px 10px; cursor:pointer; }
     .on { background-color: lightgreen; }
     .off { background-color: lightcoral; }
+
     .label { font-weight:600; width: 120px; display:inline-block; }
     hr { border: 0; border-top: 1px solid #eee; margin: 6px 0; }
 </style>
-
 
 </head>
 <body>
@@ -72,7 +58,6 @@
       <nav>
         <a href="/display">Display (live plot)</a>
         <a href="/controller">Controller</a>
-          <!--<a href="/display/full">All Plots</a>-->
         <a href="/display/CTC100A">CTC100A</a>
         <a href="/display/CTC100B">CTC100B</a>
         <a href="/display/Lakeshore372">Lakeshore 372</a>
@@ -91,46 +76,93 @@
             <div class="channel" id="{{ dev_name }}-{{ channel }}">
               <div style="margin-bottom:6px;"><strong>{{ channel }}</strong> — {{ ch_type }}</div>
 
+              {# ------------------ SWITCH CHANNEL ------------------ #}
               {% if ch_type == "switch" %}
                 <div class="row">
-                  <input type="number" step="0.01" placeholder="Voltage (V)" id="{{ dev_name }}-{{ channel }}-val">
+                  <input type="number"
+                    step="0.01"
+                    id="{{ dev_name }}-{{ channel }}-val"
+                    value="{{ last_values.get((dev_name, channel)) or '' }}"
+                    placeholder="Voltage (V)">
                   <button onclick="setSwitch('{{ dev_name }}','{{ channel }}')">Set Voltage</button>
                 </div>
+
                 <div class="row">
-                  <button id="{{ dev_name }}-{{ channel }}-off" class="off" onclick="turnOffSwitch('{{ dev_name }}','{{ channel }}')">Turn Off</button>
+                  <button id="{{ dev_name }}-{{ channel }}-off"
+                          class="{{ last_states.get((dev_name, channel), 'off') }}"
+                          onclick="turnOffSwitch('{{ dev_name }}','{{ channel }}')">
+                    Turn Off
+                  </button>
                 </div>
+
+              {# ------------------ HEATER CHANNEL ------------------ #}
               {% elif ch_type == "heater" %}
                 <div class="row">
-                  <input type="number" step="0.01" placeholder="Temperature (K)" id="{{ dev_name }}-{{ channel }}-val">
+                  <input type="number"
+                    step="0.01"
+                    placeholder="Temperature (K)"
+                    id="{{ dev_name }}-{{ channel }}-val"
+                    value="{{ last_values.get((dev_name, channel)) or '' }}">
                   <button onclick="setHeater('{{ dev_name }}','{{ channel }}')">Set Temp PID</button>
                 </div>
+
                 <div class="row">
-                  <button id="{{ dev_name }}-{{ channel }}-off" class="off" onclick="turnOffHeater('{{ dev_name }}','{{ channel }}')">Turn Off</button>
+                  <button id="{{ dev_name }}-{{ channel }}-off"
+                          class="{{ last_states.get((dev_name, channel), 'off') }}"
+                          onclick="turnOffHeater('{{ dev_name }}','{{ channel }}')">
+                    Turn Off
+                  </button>
                 </div>
+
+              {# ------------------ STILL HEATER CHANNEL ------------------ #}
               {% elif ch_type == "still_heater" %}
                 <div class="row">
-                  <input type="number" step="0.1" placeholder="% of max" id="{{ dev_name }}-{{ channel }}-val">
+                  <input type="number"
+                    step="0.1"
+                    placeholder="% of max"
+                    id="{{ dev_name }}-{{ channel }}-val"
+                    value="{{ last_values.get((dev_name, channel)) or '' }}">
                   <button onclick="setStill('{{ dev_name }}','{{ channel }}')">Set Value</button>
                 </div>
+
                 <div class="row">
-                  <button id="{{ dev_name }}-{{ channel }}-off" class="off" onclick="turnOffStill('{{ dev_name }}','{{ channel }}')">Turn Off</button>
+                  <button id="{{ dev_name }}-{{ channel }}-off"
+                          class="{{ last_states.get((dev_name, channel), 'off') }}"
+                          onclick="turnOffStill('{{ dev_name }}','{{ channel }}')">
+                    Turn Off
+                  </button>
                 </div>
+
               {% endif %}
 
               <hr>
             </div>
           {% endfor %}
-
         </div>
       {% endfor %}
+
     {% else %}
       <div>
-        <p>No devices found. Make sure your devices are connected, or run the server on the machine with serial devices attached.</p>
+        <p>No devices found. Ensure hardware is connected.</p>
       </div>
     {% endif %}
   </div>
 
 <script>
+const typing = {};  // tracks fields currently being edited
+
+function attachTypingListeners() {
+    const inputs = document.querySelectorAll("input[type=number], input[type=text]");
+    inputs.forEach(inp => {
+        inp.addEventListener("focus", () => typing[inp.id] = true);
+        inp.addEventListener("blur", () => typing[inp.id] = false);
+    });
+}
+
+window.addEventListener("DOMContentLoaded", attachTypingListeners);
+
+
+
   async function postJSON(url, body) {
     const res = await fetch(url, {
       method: 'POST',
@@ -138,8 +170,7 @@
       body: JSON.stringify(body)
     });
     if (!res.ok) {
-      const text = await res.text();
-      console.error("Request failed:", res.status, text);
+      console.error("Request failed:", res.status, await res.text());
     }
     return res.json().catch(()=>{});
   }
@@ -182,7 +213,37 @@
     postJSON('/api/turn_off_still', {device, channel});
     document.getElementById(`${device}-${channel}-off`).className = 'off';
   }
+
+  function refreshStates() {
+    fetch("/api/controller_state")
+      .then(res => res.json())
+      .then(data => {
+            // Update input fields ONLY if user is not typing
+            for (const key in data.values) {
+                const [device, channel] = key.split("::");
+                const id = `${device}-${channel}-val`;
+                const el = document.getElementById(id);
+
+                if (!el) continue;
+
+                // Skip update while user is typing
+                if (typing[id]) continue;
+
+                el.value = data.values[key] ?? "";
+            }
+
+          // Update ON/OFF button colors
+          for (const key in data.states) {
+              const [device, channel] = key.split("::");
+              const btn = document.getElementById(`${device}-${channel}-off`);
+              if (btn) btn.className = data.states[key];
+          }
+      });
+  }
+
+  // Run every second
+  setInterval(refreshStates, 1000);
 </script>
+
 </body>
 </html>
-
