@@ -1,5 +1,5 @@
 from controller_client import DeviceControllerClient
-from device import connect_device
+from device import connect_devices
 
 
 HOST = "127.0.0.1"
