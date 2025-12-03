@@ -58,3 +58,4 @@ class DeviceControllerServer:
                 raise ValueError(f"Command failed to send '{cmd}'")
 
         return response
+

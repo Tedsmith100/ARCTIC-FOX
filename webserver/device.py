@@ -42,3 +42,4 @@ def connect_devices():
 
     # Filter out None entries
     return {k: v for k, v in connected.items() if v is not None}
+

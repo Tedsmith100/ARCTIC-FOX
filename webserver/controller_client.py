@@ -121,3 +121,4 @@ class DeviceControllerClient(threading.Thread):
                         print(f"[Client] ERROR: {e}")
                         result = "1"
                     conn.sendall(result.encode("ascii"))
+
