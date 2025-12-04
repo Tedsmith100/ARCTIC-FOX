@@ -1,4 +1,6 @@
 from controller_client import DeviceControllerClient
+from hardware_readout import HardwareTemperatureReader
+from SQL import SQL
 from device import connect_devices
 
 HOST = "0.0.0.0"
@@ -10,10 +12,17 @@ if __name__ == "__main__":
     print("Detected devices:", list(devices.keys()))
     controller = DeviceControllerClient(devices, HOST, PORT)
 
+    # create sql database instance
+    sql = SQL(debug=False, options=["localhost", "axion_writer", 8082, "axion_db"])
+
+    # create hardware reader
+    temp_reader = HardwareTemperatureReader(devices, sql)
+
     # start controller thread
     controller.start()
 
-    # start temperature readout thread
+    # start the temperature readout thread
+    temp_reader.start()
 
     # keep main thread alive
     try:
