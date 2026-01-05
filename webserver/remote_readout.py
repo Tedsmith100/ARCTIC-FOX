@@ -43,7 +43,7 @@ class DBReader(threading.Thread):
         # strip " [K]" suffix
         self.clean_names = {name: name.replace(" [K]", "") for name in channel_names}
 
-        # maps clean channel name → device
+        # maps clean channel name -> device
         self.device_map = {
             ch: dev
             for dev, chans in plot_data.items()
