@@ -9,7 +9,7 @@ from CTC100 import CTC100Device
 from lakeshore224device import LakeShore224Device
 from lakeshore372device import LakeShore372Device
 
-from SQL import SQL 
+from sql import SQL 
 
 from controller import hardware_lock
 

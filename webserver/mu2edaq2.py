@@ -4,6 +4,9 @@ from device import get_channels_for_device
 from flask import Flask, render_template, request, jsonify, Response
 from sql import SQL
 
+import matplotlib
+matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
 import io
 import queue
@@ -160,72 +163,114 @@ plot_queue = queue.Queue()
 db_reader = DBReader(sql, plot_queue)
 db_reader.start()   # start reader thread
 
+def update_latest_plot_data():
+    global latest_plot_snapshot
+    try:
+        while True:
+            # Non-blocking get from queue
+            snapshot = plot_queue.get_nowait()
+            latest_plot_snapshot = snapshot  # replace with newest snapshot
+    except queue.Empty:
+        pass
+
 @app.route("/plot/<int:plot_id>.png")
 def plot_png(plot_id):
-
     if plot_id not in PLOT_MAPPING:
         return "Invalid plot ID", 404
 
     device, channels = PLOT_MAPPING[plot_id]
 
-    # Get latest DB data
-    latest_plot_data = None
-    try:
-        while True:
-            latest_plot_data = plot_queue.get_nowait()
-    except queue.Empty:
-        pass
+    # Pull newest snapshot from queue
+    update_latest_plot_data()
+    if "latest_plot_snapshot" not in globals():
+        return "No data yet", 503
 
-    if latest_plot_data is None:
-        latest_plot_data = plot_data
-
-    # Extract time + channel data for this device
-    device_data = latest_plot_data.get(device, {})
+    device_data = latest_plot_snapshot.get(device, {})
     times = device_data.get("times", [])
 
-    ys_dict = {
-        ch: device_data.get(ch, [])
-        for ch in channels
-    }
+    if not times:
+        return "No data yet", 503
 
-    buf = io.BytesIO()
+    # Convert times to minutes since first timestamp
+    t0 = times[0]
+    times_min = [(t - t0).total_seconds() / 60.0 for t in times]
+
+    # Sliding 10-minute window
+    WINDOW_MIN = 10.0
+    if times_min[-1] > WINDOW_MIN:
+        t_max = times_min[-1]
+        mask = [t >= t_max - WINDOW_MIN for t in times_min]
+    else:
+        mask = [True] * len(times_min)
+
+    times_plot = [t for t, m in zip(times_min, mask) if m]
+
     fig, ax = plt.subplots(figsize=(6, 3))
-
-    ax.set_xlabel("Time (s)")
+    ax.set_xlabel("Time (min)")
     ax.set_ylabel("Temperature (K)")
+    ax.set_title(device)
     ax.grid(True)
-    ax.set_title(f"{device}")
 
-    for ch, ys in ys_dict.items():
-        if times and ys:
-            ax.plot(times, ys, label=ch)
+    legend_entries = []
+
+    for ch in channels:
+        ys = device_data.get(ch, [])
+        if not ys:
+            continue
+
+        # Apply mask + filter invalid values
+        ys_plot = []
+        ts_plot = []
+
+        for t, y, m in zip(times_min, ys, mask):
+            if not m:
+                continue
+            if y <= -9:
+                continue
+
+            # Channel-specific cutoffs
+            if ch == "50K" and y < 50:
+                continue
+            if ch == "4K" and y < 10:
+                continue
+
+            ts_plot.append(t)
+            ys_plot.append(y)
+
+        if len(ts_plot) < 2:
+            continue
+
+        line, = ax.plot(ts_plot, ys_plot, label=ch)
+        legend_entries.append((ch, ys_plot, ts_plot))
+
+    if not legend_entries:
+        return "No valid data to plot", 503
 
     leg = ax.legend(
-        loc='upper left',
+        loc="upper left",
         bbox_to_anchor=(1.02, 1),
-        fontsize='small'
+        frameon=True,
+        fontsize="small"
     )
 
-    # Map legend labels to indices
-    label_to_index = {t.get_text(): i for i, t in enumerate(leg.texts)}
+    # Update legend text with current value + gradient
+    for text, (ch, ys, ts) in zip(leg.texts, legend_entries):
+        current = ys[-1]
 
-    # Modify legend text: temperature + gradient
-    for ch, ys in ys_dict.items():
-        if times and ys:
-            current_temp = ys[-1]
-            idx = label_to_index[ch]
+        # Gradient over last 30 seconds
+        grad_text = ""
+        t_now = ts[-1]
+        for i in range(len(ts) - 1, -1, -1):
+            if (t_now - ts[i]) * 60 >= 30:
+                dt_min = t_now - ts[i]
+                grad = (ys[-1] - ys[i]) / dt_min * 1000.0  # mK/min
+                grad_text = f"\n{grad:+.1f}mK/min"
+                break
 
-            if len(times) > 11:
-                grad = (ys[-1] - ys[-10]) / (times[-1] - times[-10])
-                leg.texts[idx].set_text(
-                    f"{ch}\n {current_temp:.3f}K\n {grad:2f}K/min"
-                )
-            else:
-                leg.texts[idx].set_text(
-                    f"{ch}\n {current_temp:.3f}K"
-                )
+        text.set_text(f"{ch} {current:.3f}K{grad_text}")
 
     fig.tight_layout()
+    buf = io.BytesIO()
     fig.savefig(buf, format="png")
     plt.close(fig)
 

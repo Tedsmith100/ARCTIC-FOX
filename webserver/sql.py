@@ -126,7 +126,16 @@ class SQL:
 
     def getSCTimes(self,start_time):
         data = []
-        sql = "select DISTINCT(time) from %sslow_control_data where time > %d" % (self.schema,start_time)
+
+        # ensure start_time is an integer
+        if isinstance(start_time, datetime.datetime):
+            start_time = int(start_time.timestamp())
+
+        #sql = "select DISTINCT(time) from %sslow_control_data where time > %d" % (self.schema,start_time)
+        sql = (
+            "select DISTINCT(time) from %sslow_control_data "
+            "where time > to_timestamp(%d)"
+        ) % (self.schema, start_time)
         if (self.Debug):
             print("SQL(): getSCTimes: %s" % (sql))
         self.DBconn.execute(sql)
@@ -135,12 +144,16 @@ class SQL:
         else:    
             rows = self.DBconn.fetchall()
             for row in rows:
-                time = int(row[0])
+                time = int(row[0].timestamp())
                 data.append(time)
         return data   
 
         
     def getSCValues(self,scids,start_time):
+        # ensure start_time is an integer
+        if isinstance(start_time, datetime.datetime):
+            start_time = int(start_time.timestamp())
+
         num = len(scids)
         dicts = [dict() for i in range(num)]
         limit = 10000000
@@ -148,7 +161,12 @@ class SQL:
         data = []
             
         for scid in scids:
-            sql = "select scid,time,value from %sslow_control_data where scid=%d and time>= %d order by time limit %d" % (self.schema,scid,start_time,limit)
+            #sql = "select scid,time,value from %sslow_control_data where scid=%d and time>= %d order by time limit %d" % (self.schema,scid,start_time,limit)
+            sql = (
+                "select scid,time,value from %sslow_control_data "
+                "where scid=%d and time >= to_timestamp(%d) "
+                "order by time limit %d"
+            ) % (self.schema, scid, start_time, limit)
             if (self.Debug):
                 print("SQL(): getSCValues: %s" % (sql))
             self.DBconn.execute(sql)

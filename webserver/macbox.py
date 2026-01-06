@@ -1,6 +1,6 @@
 from controller_client import DeviceControllerClient
 from hardware_readout import HardwareTemperatureReader
-from SQL import SQL
+from sql import SQL
 from device import connect_devices
 
 HOST = "0.0.0.0"
