@@ -55,7 +55,7 @@ class DBReader(threading.Thread):
         self.scids = {name: sql.getSCID(name) for name in channel_names}
 
         last = sql.lastUpdate()
-        self.last_timestamp = last if last else 0
+        self.last_timestamp = int(last.timestamp()) - 1 if last else 0
 
         # working internal state (deepcopy)
         self.state = copy.deepcopy(plot_data)
@@ -66,6 +66,11 @@ class DBReader(threading.Thread):
         while True:
             try:
                 timestamps = self.sql.getSCTimes(self.last_timestamp)
+
+                if not timestamps:
+                    # No new rows, sleep and continue
+                    time.sleep(self.interval)
+                    continue
 
                 for ts in sorted(timestamps):
                     rows = self.sql.getSCValues(list(self.scids.values()), ts)
@@ -97,12 +102,15 @@ class DBReader(threading.Thread):
                     for dev in updated_devices:
                         self.state[dev]["times"].append(t)
 
+                    #print("plot_data snapshot:", self.state)
+
                     # push snapshot
                     self.plot_queue.put(copy.deepcopy(self.state))
 
                     self.last_timestamp = t
 
             except Exception as e:
+                self.sql.db.rollback()
                 print("[DBReader] ERROR:", e)
 
             time.sleep(self.interval)
