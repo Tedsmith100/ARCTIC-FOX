@@ -1,58 +1,74 @@
-# controller.py (inside webserver/)
 import threading
+import json
+import socket
+import time
 
-from cooldown_loop_dilution_v2 import switch_on, switch_off, heater_on, heater_off
+class Controller(threading.Thread):
+    '''
+    Listens for frontend commands and dispatches to Channels.
+    '''
+    def __init__(self, channels, host="0.0.0.0", port=8084):
+        super().__init__(daemon=True)
+        self.channels = channels
+        self.host = host
+        self.port = port
+        self.stop_flag = threading.Event()
 
-# If your real device_lock exists, import it.
-# Otherwise assign a new lock:
-try:
-    from devices.device import device_lock as hardware_lock
-except ImportError:
-    hardware_lock = threading.Lock()
+    def handle_command(self, cmd):
+        action = cmd["action"]
+        if action == "list":
+            ret = {}
+            for name, ch in self.channels.items():
+                if ch.display is None:
+                    continue
+                ret[name] = [ch.backend.name, ch.can_control, ch.units, ch.display]
 
-class DeviceController:
-    def __init__(self, devices: dict):
-        self.devices = devices
+            ret = json.dumps(ret)
+            print(repr(ret))
+            return ret
 
-    # ---------------- Switch Functions ----------------
-    def set_switch_voltage(self, device_name, channel, voltage):
-        device = self.devices[device_name]
-        with hardware_lock:
-            switch_on(device, channel, voltage)
+        ch = self.channels[cmd["channel"]]
 
-    def turn_off_switch(self, device_name, channel):
-        device = self.devices[device_name]
-        with hardware_lock:
-            switch_off(device, channel)
+        if action == "setpoint":
+            ch.set_setpoint(cmd["value"])
+            return '0'
+        elif action == "manual":
+            for i in range(91):
+                volt_out = 9.0 - i*0.1
+                ch.set_manual(volt_out)
+                time.sleep(1800)
+            #ch.set_manual(cmd["value"])
+            return '0'
+        elif action == "off":
+            ch.off()
+            return '0'
+        
+        return '1'
 
-    # ---------------- Heater Functions ----------------
-    def set_heater_temperature(self, device_name, channel, temperature):
-        device = self.devices[device_name]
-        with hardware_lock:
-            device.write_setpoint(channel, temperature)
-            heater_on(device, channel)
+    def run(self):
+        with socket.socket() as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind((self.host, self.port))
+            s.listen()
+            print("[Client] Ready for commands...")
 
-    def turn_off_heater(self, device_name, channel):
-        device = self.devices[device_name]
-        with hardware_lock:
-            heater_off(device, channel)
+            while not self.stop_flag.is_set():
+                try:
+                    s.settimeout(0.1)
+                    conn, addr = s.accept()
+                except socket.timeout:
+                    continue
 
-    def toggle_heater(self, device_name, channel, state: bool):
-        device = self.devices[device_name]
-        with hardware_lock:
-            if state:
-                heater_on(device, channel)
-            else:
-                heater_off(device, channel)
+                with conn:
+                    data = conn.recv(1024).decode("ascii")
+                    print("[Client] Received:", data)
 
-    # ---------------- Still Heater Functions ----------------
-    def set_still_percentage(self, device_name, channel, percent):
-        device = self.devices[device_name]
-        with hardware_lock:
-            device.set_still_voltage(percent)
+                    cmd = json.loads(data)
 
-    def turn_off_still(self, device_name, channel):
-        device = self.devices[device_name]
-        with hardware_lock:
-            device.set_still_voltage(0)
+                    try:
+                        result = self.handle_command(cmd)
+                    except Exception as e:
+                        print(f"[Client] ERROR: {e}")
+                        result = "1"
+                    conn.sendall(result.encode("ascii"))
 
