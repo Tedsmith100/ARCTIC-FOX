@@ -8,18 +8,22 @@ class LakeShore372Device:
 
     def __init__(self, port, name = None):
         try:
-            if Model372 is not None:
-                self.device = Model372(com_port=port, baud_rate=57600)
-            else:
-                raise ImportError("Lake Shore Model372 driver not available.")
+            if Model372 is None:
+                raise ImportError("Lake Shore Model 372 driver not available.")
+            
+            self.device = Model372(baud_rate=57600, com_port=port)
+
             self.port = port
             self.address = port  # Added to store the address
+            self.name = name
+
             self.input_channels = []
             self.output_channels = []
+
             self.list_channels()
-            self.name = name
             print(
                 f"Connected to Lake Shore 372 on {port} with input channels {self.input_channels} and output channels {self.output_channels}")
+
         except Exception as e:
             raise e
 
@@ -30,25 +34,57 @@ class LakeShore372Device:
         return self.output_channels
 
     def get_temperature(self, channel):
+        '''
+        Read temperature in Kelvin from input channel 1–16 or A.
+        Uses package API.
+        '''
         try:
-            if channel == 'A':
-                temp = self.device.get_all_input_readings(channel)['kelvin']
-            else:
-                temp = self.device.get_all_input_readings(int(channel))['kelvin']
-            return temp
+            temp = self.device.get_kelvin_reading(channel)
+            ret = float(temp)
+            #print(f'372: {channel} = {temp}')
+            return ret
         except Exception as e:
             print(
                 f"Error reading temperature from Lake Shore 372 (Channel {channel}): {e}"
             )
             return None
 
+    def get_resistance(self, channel):
+        '''
+        Read resistance in Ohms from input channel 1–16 or A.
+        Uses package API.
+        '''
+        try:
+            res = self.device.get_resistance_reading(channel)
+            ret = float(res)
+            #print(f'372: {channel} = {res}')
+            return ret
+        except Exception as e:
+            print(
+                f"Error reading resistance from Lake Shore 372 (Channel {channel}): {e}"
+            )
+            return None
+
     def read_all_channels(self):
+        '''
+        Read out temperature of all channels.
+        '''
         readings = {}
         for channel in self.input_channels:
             temp = self.get_temperature(channel)
             readings[channel] = temp
         return readings
 
+    def list_channels(self):
+        '''
+        List available input channels on the Lake Shore 218.
+        Channels are 1–16 and A.
+        '''
+        self.input_channels = list(range(1, 17))
+
+
+
+"""
     # def set_heater_output(self, heater_number=1, heat_percent=0.0):
     #     try:
     #         # Setting heater output percentage according to the official driver methods
@@ -75,12 +111,12 @@ class LakeShore372Device:
             return None
 
     def list_channels(self):
-        """
+        '''
         List available input and output channels on the Lake Shore 372.
 
         Input channels are '1' - '16', or 'A'.
         Output channels are '1' (Warm-up heater), '2' (Analog output).
-        """
+        '''
         self.input_channels = [str(i) for i in range(1, 17)] + ['A']
         self.output_channels = ['sample_heater', 'still_heater']
 
@@ -91,9 +127,9 @@ class LakeShore372Device:
         return self.device.get_still_output()
     
     def get_output(self, channel):
-        if channel is 'sample_heater':
+        if channel == 'sample_heater':
             return self.sample_heater_output_percentage()
-        elif channel is 'still_heater':
+        elif channel == 'still_heater':
             return self.still_heater_output_query()
 
     def set_still_voltage(self, voltage_percentage):
@@ -104,3 +140,4 @@ class LakeShore372Device:
 
     def MC_heater_turn_off(self):
         self.device.set_heater_output_range(0, self.device.SampleHeaterOutputRange(0))
+"""
