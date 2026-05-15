@@ -1,0 +1,207 @@
+channels:
+  4pumpA [K]:
+    backend: software_pid
+    temperature:
+      device: Lakeshore218
+      channel: 2
+    actuator:
+      device: MX103QP
+      channel: 1
+    pid:
+      kp: 5.0
+      ki: 0.3
+      kd: 0.0
+      min: 299.0 
+      max: 300.0
+    webserver:
+      controller: true
+      units: K
+
+      #  4pumpB [K]:
+      #backend: software_pid
+      #temperature:
+      #device: Lakeshore350
+      #channel: B
+      #actuator:
+      #device: MX103QP
+      #channel: 3
+      #pid:
+      #kp: 5.0
+      #ki: 0.3
+      #kd: 0.0
+      #min: 299.0 
+      #max: 300.0
+      #webserver:
+      #controller: true
+      #units: K
+
+      #3pumpA [K]:
+      #backend: software_pid
+      #temperature:
+      #device: Lakeshore218
+      #channel: 5
+      #actuator:
+      #device: MX103QP
+      #channel: 2
+      #pid:
+      #kp: 5.0
+      #ki: 0.3
+      #kd: 0.0
+      #min: 299.0 
+      #max: 300.0
+      #webserver:
+      #controller: true
+      #units: K
+
+      #3pumpB [K]:
+      #backend: software_pid
+      #temperature:
+      #device: Lakeshore350
+      #channel: B
+      #actuator:
+      #device: MX103QP
+      #channel: 4
+      #pid:
+      #kp: 5.0
+      #ki: 0.3
+      #kd: 0.0
+      #min: 299.0 
+      #max: 300.0
+      #webserver:
+      #controller: true
+      #units: K
+
+      #4switchA [K]:
+      #backend: manual
+      #temperature:
+      #device: Lakeshore218
+      #channel: 3
+      #actuator:
+      #device: GPDX303SA
+      #channel: 1
+      #webserver:
+      #controller: true
+      #units: V
+
+      #4switchB [K]:
+      #backend: manual
+      #temperature:
+      #device: Lakeshore350
+      #channel: B
+      #actuator:
+      #device: GPDX303SB
+      #channel: 1
+      #webserver:
+      #controller: true
+      #units: V
+
+      #3switchA [K]:
+      #backend: manual
+      #temperature:
+      #device: Lakeshore218
+      #channel: 6
+      #actuator:
+      #device: GPDX303SA
+      #channel: 2
+      #webserver:
+      #controller: true
+      #units: V
+
+      #3switchB [K]:
+      #backend: manual
+      #temperature:
+      #device: Lakeshore350
+      #channel: 3
+      #actuator:
+      #device: GPDX303SB
+      #channel: 2
+      #webserver:
+      #controller: true
+      #units: V
+
+      #4HePotA [K]:
+      #backend: readout
+      #temperature:
+      #device: Lakeshore218
+      #channel: 1
+
+      #4HePotB [K]:
+      #backend: readout
+      #temperature:
+      #device: Lakeshore350
+      #channel: A
+
+      #3HePotA [K]:
+      #backend: readout
+      #temperature:
+      #device: Lakeshore218
+      #channel: 4
+
+      #3HePotB [K]:
+      #backend: readout
+      #temperature:
+      #device: Lakeshore350
+      #channel: D
+
+      #50K [K]:
+      #backend: readout
+      #temperature:
+      #device: Lakeshore372
+      #channel: 10
+
+      #4K [K]:
+      #backend: readout
+      #temperature:
+      #device: Lakeshore372
+      #channel: 11
+
+
+
+#
+#  3PumpA:
+#   backend: software_pid
+#   temperature:
+#     device: ls350
+#     channel: A
+#   actuator:
+#      device: psu_pumps
+#      channel: 1
+#    pid:
+#      kp: 5.0
+#      ki: 0.3
+#      kd: 0.0
+#
+#  4PumpB:
+#    backend: software_pid
+#    temperature:
+#      device: ls350
+#      channel: A
+#    actuator:
+#      device: psu_pumps
+#      channel: 1
+#    pid:
+#      kp: 5.0
+#      ki: 0.3
+#      kd: 0.0
+#
+#  3PumpB:
+#    backend: software_pid
+#    temperature:
+#      device: ls350
+#      channel: A
+#    actuator:
+#      device: psu_pumps
+#      channel: 1
+#    pid:
+#      kp: 5.0
+#      ki: 0.3
+#      kd: 0.0
+#
+#  Still:
+#    backend: manual
+#    temperature:
+#      device: ls350
+#      channel: C
+#    actuator:
+#      device: ls350
+#      channel: heater

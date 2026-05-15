@@ -1,0 +1,117 @@
+channels:
+  A1 [R]:
+    backend: readout_R
+    temperature:
+      device: Lakeshore372
+      channel: 1
+
+  A2 [R]:
+    backend: readout_R
+    temperature:
+      device: Lakeshore372
+      channel: 2
+
+  A3 [R]:
+    backend: readout_R
+    temperature:
+      device: Lakeshore372
+      channel: 3
+
+  A4 [R]:
+    backend: readout_R
+    temperature:
+      device: Lakeshore372
+      channel: 4
+
+  A5 [R]:
+    backend: readout_R
+    temperature:
+      device: Lakeshore372
+      channel: 5
+
+  A6 [R]:
+    backend: readout_R
+    temperature:
+      device: Lakeshore372
+      channel: 6
+
+  A7 [R]:
+    backend: readout_R
+    temperature:
+      device: Lakeshore372
+      channel: 7
+
+  A8 [R]:
+    backend: readout_R
+    temperature:
+      device: Lakeshore372
+      channel: 8
+
+  A9 [R]:
+    backend: readout_R
+    temperature:
+      device: Lakeshore372
+      channel: 9
+
+  50K [K]:
+    backend: readout
+    temperature:
+      device: Lakeshore372
+      channel: 10
+
+  4K [K]:
+    backend: readout
+    temperature:
+      device: Lakeshore372
+      channel: 11
+
+
+
+#
+#  3PumpA:
+#   backend: software_pid
+#   temperature:
+#     device: ls350
+#     channel: A
+#   actuator:
+#      device: psu_pumps
+#      channel: 1
+#    pid:
+#      kp: 5.0
+#      ki: 0.3
+#      kd: 0.0
+#
+#  4PumpB:
+#    backend: software_pid
+#    temperature:
+#      device: ls350
+#      channel: A
+#    actuator:
+#      device: psu_pumps
+#      channel: 1
+#    pid:
+#      kp: 5.0
+#      ki: 0.3
+#      kd: 0.0
+#
+#  3PumpB:
+#    backend: software_pid
+#    temperature:
+#      device: ls350
+#      channel: A
+#    actuator:
+#      device: psu_pumps
+#      channel: 1
+#    pid:
+#      kp: 5.0
+#      ki: 0.3
+#      kd: 0.0
+#
+#  Still:
+#    backend: manual
+#    temperature:
+#      device: ls350
+#      channel: C
+#    actuator:
+#      device: ls350
+#      channel: heater
