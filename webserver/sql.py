@@ -195,6 +195,64 @@ class SQL:
                 d.update(v)
             data.append(d)
         return data
+    
+    def getSCValuesBetween(self, names, start_time, end_time):
+        """
+        Fetch data for given channels between start_time and end_time.
+
+        names      : list of channel names
+        start_time : datetime or unix timestamp
+        end_time   : datetime or unix timestamp
+
+        returns:
+        {
+            channel_name: {
+                "time":  [...],
+                "value": [...]
+            }
+        }
+        """
+
+        # normalize start_time
+        if isinstance(start_time, datetime.datetime):
+            start_time = int(start_time.timestamp())
+        # normalize end_time
+        if isinstance(end_time, datetime.datetime):
+            end_time = int(end_time.timestamp())
+
+        data = {}
+
+        for name in names:
+            scid = self.getSCID(name)
+
+            sql = (
+                "SELECT time, value FROM %sslow_control_data "
+                "WHERE scid = %d "
+                "AND time >= to_timestamp(%d) "
+                "AND time <= to_timestamp(%d) "
+                "ORDER BY time"
+            ) % (self.schema, scid, start_time, end_time)
+
+            if self.Debug:
+                print("SQL():", sql)
+
+            self.DBconn.execute(sql)
+            rows = self.DBconn.fetchall()
+
+            times = []
+            values = []
+
+            for time_val, value in rows:
+                times.append(time_val)
+                values.append(float(value))
+
+            data[name] = {
+                "time": times,
+                "value": values
+            }
+
+        return data
         
     def close(self):
         self.db.close()
+
