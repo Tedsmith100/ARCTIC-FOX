@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+title: ARCTIC-FOX
+message: If you use this software, please cite it using the metadata from this file.
+type: software
+
+authors:
+  - family-names: Millns
+    given-names: Matthew
+    affiliation: University of Manchester
+  - family-names: Smith
+    given-names: Edward
+    affiliation: University of Manchester
+
+repository-code: https://github.com/HALO-DM/ARCTIC-FOX
+
+version: v1.0.0
+date-released: 2026-01-29
+
+license: GPL-3.0-only
+
+doi: 10.5281/zenodo.20272448
