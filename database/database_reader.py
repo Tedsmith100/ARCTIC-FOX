@@ -67,7 +67,7 @@ def read_db(config_file : str):
 
     df = df.sort_values("time")
 
-    df.to_csv(f"{START_TIME}_cooldown.csv", index=False)
+    df.to_csv(f"{datetime.datetime.fromisoformat(START_TIME).strftime('%Y-%m-%d_%H-%M-%S')}_cooldown.csv", index=False)
 
     return
 
